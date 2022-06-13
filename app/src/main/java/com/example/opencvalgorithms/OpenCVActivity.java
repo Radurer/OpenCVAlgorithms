@@ -43,6 +43,7 @@ import org.opencv.imgproc.Imgproc;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Array;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -64,13 +65,6 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
     int goodCount = 0;
     int descriptorsCount = 0;
     int featuresCount = 0;
-    ORB orbDetector;
-    BRISK briskDetector;
-    MSER mserDetector;
-    SIFT siftDetector;
-    KAZE kazeDetector;
-    AKAZE akazeDetector;
-    AffineFeature asiftDetector;
 
     Feature2D chosenAlgorithmVariable;
     double time;
@@ -143,60 +137,36 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
         Utils.bitmapToMat(bitmap, img1);
         Imgproc.cvtColor(img1, img1, Imgproc.COLOR_RGB2GRAY);
         img1.convertTo(img1, 0); //converting the image to match with the type of the cameras image
-
         descriptors1 = new Mat();
         keypoints1 = new MatOfKeyPoint();
         //end of input image variable initialization
 
-        //initializing the variables necessary to process the frames from the video feed
-//        descriptors2 = new Mat();
-//        keypoints2 = new MatOfKeyPoint();
-//        matchesList = new ArrayList<>();
-//        good_matches = new LinkedList<>();
-//        goodMatches = new MatOfDMatch();
-//        outputImg = new Mat();
-//        drawnMatches = new MatOfByte();
-
         switch(chosenAlgorithm) {
             case "ORB":
                 chosenAlgorithmVariable = ORB.create();
-                orbDetector = ORB.create();
-                orbDetector.detect(img1, keypoints1);
-                orbDetector.compute(img1, keypoints1, descriptors1);
-                //orbDetector.detectAndCompute(img1, new Mat(), keypoints1, descriptors1);
-                matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMING);
+                matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMINGLUT);
                 break;
             case "SIFT":
                 chosenAlgorithmVariable = SIFT.create();
-                siftDetector = SIFT.create();
-                long start = System.nanoTime();
-                siftDetector.detect(img1, keypoints1);
-                siftDetector.compute(img1, keypoints1, descriptors1);
-                long end = System.nanoTime();
                 matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
                 break;
             case "KAZE":
                 chosenAlgorithmVariable = KAZE.create();
-                kazeDetector = KAZE.create();
-                kazeDetector.detect(img1, keypoints1);
-                kazeDetector.compute(img1, keypoints1, descriptors1);
                 matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_SL2);
                 break;
             case "AKAZE":
                 chosenAlgorithmVariable = AKAZE.create();
-                akazeDetector = AKAZE.create();
-                akazeDetector.detect(img1, keypoints1);
-                akazeDetector.compute(img1, keypoints1, descriptors1);
                 matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMINGLUT);
                 break;
             case "BRISK":
                 chosenAlgorithmVariable = BRISK.create();
-                briskDetector = BRISK.create();
-                briskDetector.detect(img1, keypoints1);
-                briskDetector.compute(img1, keypoints1, descriptors1);
                 matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMINGLUT);
                 break;
         }
+
+//        chosenAlgorithmVariable.detect(img1, keypoints1);
+//        chosenAlgorithmVariable.compute(img1, keypoints1, descriptors1);
+        chosenAlgorithmVariable.detectAndCompute(img1, new Mat(), keypoints1, descriptors1);
 
     }
 
@@ -258,53 +228,17 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
 
     public Mat recognize(Mat aInputFrame) {
         Imgproc.cvtColor(aInputFrame, aInputFrame, Imgproc.COLOR_RGB2GRAY);
-//        descriptors2 = new Mat();
-//        keypoints2 = new MatOfKeyPoint();
-
-        switch (chosenAlgorithm) {
-            case "ORB":
-                tempStart = System.nanoTime();
-                orbDetector.detect(aInputFrame, keypoints2);
-                orbDetector.compute(aInputFrame, keypoints2, descriptors2);
-                tempEnd = System.nanoTime();
-                break;
-            case "SIFT":
-                siftDetector.detect(aInputFrame, keypoints2);
-                siftDetector.compute(aInputFrame, keypoints2, descriptors2);
-                break;
-            case "KAZE":
-                kazeDetector.detect(aInputFrame, keypoints2);
-                kazeDetector.compute(aInputFrame, keypoints2, descriptors2);
-                break;
-            case "AKAZE":
-                akazeDetector.detect(aInputFrame, keypoints2);
-                akazeDetector.compute(aInputFrame, keypoints2, descriptors2);
-                break;
-            case "BRISK":
-                briskDetector.detect(aInputFrame, keypoints2);
-                briskDetector.compute(aInputFrame, keypoints2, descriptors2);
-                break;
-        }
-
-        // Matching
-//        List<MatOfDMatch> matchesList = new ArrayList<>();
-        if (img1.type() == aInputFrame.type()) {
-            secondStart = System.nanoTime();
-            matcher.knnMatch(descriptors1, descriptors2, matchesList, 2);
-            secondEnd = System.nanoTime();
-        } else {
-            return aInputFrame;
-        }
-
-//        LinkedList<DMatch> good_matches = new LinkedList<DMatch>();
-        //ArrayList<Float> best_matches = new ArrayList<Float>();
-
-//        MatOfDMatch goodMatches = new MatOfDMatch();
-//        Mat outputImg = new Mat();
-//        MatOfByte drawnMatches = new MatOfByte();
-        if (aInputFrame.empty() || aInputFrame.cols() < 1 || aInputFrame.rows() < 1) {
-            return aInputFrame;
-        }
+        Log.i(TAG, "\n\n");
+        long start = System.nanoTime();
+        chosenAlgorithmVariable.detectAndCompute(aInputFrame, new Mat(), keypoints2, descriptors2);
+        long end = System.nanoTime();
+        Log.i(TAG, "detectAndCompute length: " + (double)TimeUnit.NANOSECONDS.toMicros(end-start)/1000
+                );
+        start = System.nanoTime();
+        matcher.knnMatch(descriptors1, descriptors2, matchesList, 2);
+        end = System.nanoTime();
+        Log.i(TAG, "knnMatch length: " + (double)TimeUnit.NANOSECONDS.toMicros(end-start)/1000 +
+                " descriptors2 size: " + descriptors2.size() + " matches " + matchesList.size());
 
         for (int i = 0; i < matchesList.size(); i++) {
             if(matchesList.get(i).rows() > 1){
@@ -314,6 +248,8 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
                 }
             }
         }
+
+        Log.i(TAG, "goodMatches: " + good_matches.size());
 
         goodMatches.fromList(good_matches);
         Features2d.drawMatches(img1, keypoints1, aInputFrame, keypoints2, goodMatches, outputImg, GREEN, RED, drawnMatches, Features2d.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS);
@@ -336,12 +272,13 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
         previousTime = time;
         time = SystemClock.elapsedRealtimeNanos();
-        frameRate = (1000000000/(time - previousTime));
+        frameRate = 1000000000/(time-previousTime);
+        Log.i(TAG, "Frames: " + frameRate + " msec per frame: " + 1000/frameRate);
         Mat result = recognize(inputFrame.rgba());
-        long start = System.nanoTime();
+
         resetVariables();
-        long end = System.nanoTime();
-        Log.i(TAG, "TOTAL RECOGNIZE() METHOD TIME FOR ORB: " + TimeUnit.NANOSECONDS.toMicros(end-start) + " ms.");
+
+        //Log.i(TAG, "TOTAL RECOGNIZE() METHOD TIME FOR ORB: " + TimeUnit.NANOSECONDS.toMicros(end-start) + " ms.");
         //Log.i(TAG, "POTENTIAL RECOGNIZE() METHOD TIME IMPROVEMENT: " + (double)TimeUnit.NANOSECONDS.toMicros(end-start-(tempEnd - tempStart) - (secondEnd - secondStart)
            //                                                                                 - (thirdEnd - thirdStart))/1000 + " ms.");
 
