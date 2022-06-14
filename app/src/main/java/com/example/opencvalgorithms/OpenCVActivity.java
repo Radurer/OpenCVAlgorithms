@@ -231,6 +231,7 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
         Log.i(TAG, "\n\n");
         long start = System.nanoTime();
         chosenAlgorithmVariable.detectAndCompute(aInputFrame, new Mat(), keypoints2, descriptors2);
+//        Features2d.drawKeypoints(img1, keypoints1, outputImg, RED, Features2d.DrawMatchesFlags_DRAW_RICH_KEYPOINTS);
         long end = System.nanoTime();
         Log.i(TAG, "detectAndCompute length: " + (double)TimeUnit.NANOSECONDS.toMicros(end-start)/1000
                 );
@@ -252,7 +253,7 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
         Log.i(TAG, "goodMatches: " + good_matches.size());
 
         goodMatches.fromList(good_matches);
-        Features2d.drawMatches(img1, keypoints1, aInputFrame, keypoints2, goodMatches, outputImg, GREEN, RED, drawnMatches, Features2d.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS);
+        //Features2d.drawMatches(img1, keypoints1, aInputFrame, keypoints2, goodMatches, outputImg, GREEN, RED, drawnMatches, Features2d.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS);
         Imgproc.resize(outputImg, outputImg, aInputFrame.size());
 
         return outputImg;
@@ -274,8 +275,8 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
         time = SystemClock.elapsedRealtimeNanos();
         frameRate = 1000000000/(time-previousTime);
         Log.i(TAG, "Frames: " + frameRate + " msec per frame: " + 1000/frameRate);
-        Mat result = recognize(inputFrame.rgba());
 
+        Mat result = recognize(inputFrame.rgba());
         resetVariables();
 
         //Log.i(TAG, "TOTAL RECOGNIZE() METHOD TIME FOR ORB: " + TimeUnit.NANOSECONDS.toMicros(end-start) + " ms.");
