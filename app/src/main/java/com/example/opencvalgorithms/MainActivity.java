@@ -1,9 +1,12 @@
 package com.example.opencvalgorithms;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.WindowManager;
 import android.widget.Button;
 
 public class MainActivity extends AppCompatActivity {
@@ -11,23 +14,21 @@ public class MainActivity extends AppCompatActivity {
     private Button orbButton;
     private Button briskButton;
     private Button siftButton;
-    private Button asiftButton;
     private Button kazeButton;
     private Button akazeButton;
-    private Button mserButton;
 
+    @RequiresApi(api = Build.VERSION_CODES.P)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
 
         orbButton = findViewById(R.id.orbButton);
         briskButton = findViewById(R.id.briskButton);
         siftButton = findViewById(R.id.siftButton);
-        asiftButton = findViewById(R.id.asiftButton);
         kazeButton = findViewById(R.id.kazeButton);
         akazeButton = findViewById(R.id.akazeButton);
-        mserButton = findViewById(R.id.mserButton);
 
         Intent intent = new Intent(this, OpenCVActivity.class);
 
@@ -46,11 +47,6 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        asiftButton.setOnClickListener(view -> {
-            intent.putExtra("SELECTED_ALGORITHM", "ASIFT");
-            startActivity(intent);
-        });
-
         kazeButton.setOnClickListener(view -> {
             intent.putExtra("SELECTED_ALGORITHM", "KAZE");
             startActivity(intent);
@@ -61,14 +57,6 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        mserButton.setOnClickListener(view -> {
-            intent.putExtra("SELECTED_ALGORITHM", "MSER");
-            startActivity(intent);
-        });
-
-
     }
-
-
 
 }

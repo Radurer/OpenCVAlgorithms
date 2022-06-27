@@ -2,20 +2,21 @@ package com.example.opencvalgorithms;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
-
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.WindowManager;
-
+import android.widget.Button;
+import android.widget.TextView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
@@ -29,70 +30,72 @@ import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.AKAZE;
-import org.opencv.features2d.AffineFeature;
 import org.opencv.features2d.BRISK;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.Feature2D;
 import org.opencv.features2d.Features2d;
 import org.opencv.features2d.KAZE;
-import org.opencv.features2d.MSER;
 import org.opencv.features2d.ORB;
 import org.opencv.features2d.SIFT;
 import org.opencv.imgproc.Imgproc;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Array;
-import java.sql.Time;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-
-public class OpenCVActivity<features2d> extends Activity implements CameraBridgeViewBase.CvCameraViewListener2 {
+public class OpenCVActivity extends Activity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     private static final String TAG = "OCVSample::Activity";
     private int w, h;
     private CameraBridgeViewBase mOpenCvCameraView;
+    private Button pauseButton;
+    private Button statsButton;
+    private Dialog statsPopup;
+    private Button closeStatsButton;
+    private TextView statsInformation;
+    private boolean isProcessingPaused = false;
     Scalar RED = new Scalar(255, 0, 0);
     Scalar GREEN = new Scalar(0, 255, 0);
 
     String chosenAlgorithm;
 
-    int goodCount = 0;
-    int descriptorsCount = 0;
-    int featuresCount = 0;
-
     Feature2D chosenAlgorithmVariable;
-    double time;
-    double previousTime;
+    double frameTimestamp;
+    double previousFrameTimestamp;
     double frameRate;
-    long tempStart;
-    long tempEnd;
-    long cumulativeTime;
 
-    long secondStart;
-    long secondEnd;
+    long detectAndComputeStart;
+    long detectAndComputeEnd;
 
-    long thirdStart;
-    long thirdEnd;
+    long matchStart;
+    long matchEnd;
 
+    long drawMatchesStart;
+    long drawMatchesEnd;
+
+    float minimumDistance = Float.MAX_VALUE;
+    float maximumDistance = 0;
+
+    final long NANOS_TO_SECONDS = 1000000000;
+    final long MILLIS_TO_SECONDS = 1000;
+    final long MICROS_TO_MILLIS = 1000;
 
     DescriptorMatcher matcher;
-    Mat descriptors1;
-    Mat img1;
-    MatOfKeyPoint keypoints1;
+    Mat inputImageDescriptors;
+    Mat inputImage;
+    MatOfKeyPoint inputImageKeypoints;
 
     List<MatOfDMatch> matchesList = new ArrayList<>();
-    LinkedList<DMatch> good_matches = new LinkedList<>();
-    MatOfDMatch goodMatches = new MatOfDMatch();
-    Mat outputImg = new Mat();
+    LinkedList<DMatch> goodMatchesList = new LinkedList<>();
+    MatOfDMatch goodMatchesMat = new MatOfDMatch();
+    Mat outputImage = new Mat();
     MatOfByte drawnMatches = new MatOfByte();
-    MatOfKeyPoint keypoints2 = new MatOfKeyPoint();
-    Mat descriptors2 = new Mat();
+    MatOfKeyPoint liveFrameKeypoints = new MatOfKeyPoint();
+    Mat liveFrameDescriptors = new Mat();
     double ratio = 0.7;
 
     static {
@@ -126,19 +129,19 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
     private void initializeOpenCVDependencies() throws IOException {
         mOpenCvCameraView.setCameraPermissionGranted();
         mOpenCvCameraView.enableView();
-        time = SystemClock.elapsedRealtimeNanos();
+        frameTimestamp = SystemClock.elapsedRealtimeNanos();
         Log.i(TAG, "View Enabled");
 
         //initializing the variables necessary to process the input image
-        img1 = new Mat();
+        inputImage = new Mat();
         AssetManager assetManager = getAssets();
-        InputStream istr = assetManager.open("a.jpeg");
-        Bitmap bitmap = BitmapFactory.decodeStream(istr);
-        Utils.bitmapToMat(bitmap, img1);
-        Imgproc.cvtColor(img1, img1, Imgproc.COLOR_RGB2GRAY);
-        img1.convertTo(img1, 0); //converting the image to match with the type of the cameras image
-        descriptors1 = new Mat();
-        keypoints1 = new MatOfKeyPoint();
+        InputStream inputImageName = assetManager.open("dollar.jpeg");
+        Bitmap bitmap = BitmapFactory.decodeStream(inputImageName);
+        Utils.bitmapToMat(bitmap, inputImage);
+        Imgproc.cvtColor(inputImage, inputImage, Imgproc.COLOR_RGB2GRAY);
+        inputImage.convertTo(inputImage, 0); //converting the image to match with the type of the cameras image
+        inputImageDescriptors = new Mat();
+        inputImageKeypoints = new MatOfKeyPoint();
         //end of input image variable initialization
 
         switch(chosenAlgorithm) {
@@ -164,9 +167,7 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
                 break;
         }
 
-//        chosenAlgorithmVariable.detect(img1, keypoints1);
-//        chosenAlgorithmVariable.compute(img1, keypoints1, descriptors1);
-        chosenAlgorithmVariable.detectAndCompute(img1, new Mat(), keypoints1, descriptors1);
+        chosenAlgorithmVariable.detectAndCompute(inputImage, new Mat(), inputImageKeypoints, inputImageDescriptors);
 
     }
 
@@ -175,7 +176,6 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
 
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
-
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_opencvactivity);
@@ -187,6 +187,60 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
         mOpenCvCameraView = findViewById(R.id.javaCameraView);
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
+        pauseButton = findViewById(R.id.pauseScanningButton);
+        statsButton = findViewById(R.id.showStatsButton);
+
+        pauseButton.setOnClickListener(view -> {
+            if(isProcessingPaused){
+                statsButton.setVisibility(View.INVISIBLE);
+                pauseButton.setText("PAUSE");
+                mOpenCvCameraView.enableView();
+                isProcessingPaused = false;
+            }
+            else{
+                statsButton.setVisibility(View.VISIBLE);
+                pauseButton.setText("RESUME");
+                mOpenCvCameraView.disableView();
+                isProcessingPaused = true;
+            }
+
+        });
+
+        statsButton.setOnClickListener(view -> {
+
+            statsPopup = new Dialog(OpenCVActivity.this);
+            statsPopup.setContentView(R.layout.stats_popup);
+            statsPopup.setCancelable(true);
+            statsPopup.setCanceledOnTouchOutside(false);
+            statsPopup.show();
+
+            closeStatsButton = statsPopup.findViewById(R.id.popupCloseButton);
+            statsInformation = statsPopup.findViewById(R.id.statsInformation);
+
+            String stats = "";
+
+            stats += "Chosen algorithm: " + chosenAlgorithm + "\n";
+            stats += "Key points initial image: " + inputImageKeypoints.size() + "\n";
+            stats += "Descriptors initial image: " + inputImageDescriptors.size() + "\n";
+            stats += "Key points this frame: " + liveFrameKeypoints.size() + "\n";
+            stats += "Descriptors this frame: " + liveFrameDescriptors.size() + "\n";
+            stats += "Total matches: " + matchesList.size() + "\n";
+            stats += "KNN ratio value: " + ratio + "\n";
+            stats += "Matches kept after KNN ratio test: " + goodMatchesList.size() + "\n";
+            stats += "Minimum distance for kept matches: " + BigDecimal.valueOf(minimumDistance).setScale(2, RoundingMode.HALF_UP) + "\n";
+            stats += "Maximum distance for kept matches: " + BigDecimal.valueOf(maximumDistance).setScale(2, RoundingMode.HALF_UP) + "\n";
+            stats += "Time spent computing this frame: " + BigDecimal.valueOf(MILLIS_TO_SECONDS/frameRate).setScale(2, RoundingMode.HALF_UP) + " ms.\n";
+            stats += "Time spent for detectAndCompute(): " + BigDecimal.valueOf((double)TimeUnit.NANOSECONDS.toMicros(detectAndComputeEnd-detectAndComputeStart)/MICROS_TO_MILLIS).setScale(2, RoundingMode.HALF_UP) + " ms.\n";
+            stats += "Time spent for knnMatch(): " + BigDecimal.valueOf((double)TimeUnit.NANOSECONDS.toMicros(matchEnd-matchStart)/MICROS_TO_MILLIS).setScale(2, RoundingMode.HALF_UP) + " ms.\n";
+            stats += "Time spent for drawMatches(): " + BigDecimal.valueOf((double)TimeUnit.NANOSECONDS.toMicros(drawMatchesEnd-drawMatchesStart)/MICROS_TO_MILLIS).setScale(2, RoundingMode.HALF_UP) + " ms.\n";
+
+            statsInformation.setText(stats);
+
+            closeStatsButton.setOnClickListener(view1 -> {
+                statsPopup.dismiss();
+            });
+
+        });
 
         Bundle bundle = getIntent().getExtras();
         chosenAlgorithm = bundle.getString("SELECTED_ALGORITHM");
@@ -196,8 +250,9 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
     @Override
     public void onPause() {
         super.onPause();
-        if (mOpenCvCameraView != null)
+        if (mOpenCvCameraView != null) {
             mOpenCvCameraView.disableView();
+        }
     }
 
     @Override
@@ -214,8 +269,9 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
 
     public void onDestroy() {
         super.onDestroy();
-        if (mOpenCvCameraView != null)
+        if (mOpenCvCameraView != null) {
             mOpenCvCameraView.disableView();
+        }
     }
 
     public void onCameraViewStarted(int width, int height) {
@@ -228,62 +284,56 @@ public class OpenCVActivity<features2d> extends Activity implements CameraBridge
 
     public Mat recognize(Mat aInputFrame) {
         Imgproc.cvtColor(aInputFrame, aInputFrame, Imgproc.COLOR_RGB2GRAY);
-        Log.i(TAG, "\n\n");
-        long start = System.nanoTime();
-        chosenAlgorithmVariable.detectAndCompute(aInputFrame, new Mat(), keypoints2, descriptors2);
-//        Features2d.drawKeypoints(img1, keypoints1, outputImg, RED, Features2d.DrawMatchesFlags_DRAW_RICH_KEYPOINTS);
-        long end = System.nanoTime();
-        Log.i(TAG, "detectAndCompute length: " + (double)TimeUnit.NANOSECONDS.toMicros(end-start)/1000
-                );
-        start = System.nanoTime();
-        matcher.knnMatch(descriptors1, descriptors2, matchesList, 2);
-        end = System.nanoTime();
-        Log.i(TAG, "knnMatch length: " + (double)TimeUnit.NANOSECONDS.toMicros(end-start)/1000 +
-                " descriptors2 size: " + descriptors2.size() + " matches " + matchesList.size());
+        detectAndComputeStart = System.nanoTime();
+        chosenAlgorithmVariable.detectAndCompute(aInputFrame, new Mat(), liveFrameKeypoints, liveFrameDescriptors);
+        detectAndComputeEnd = System.nanoTime();
+        matchStart = System.nanoTime();
+        matcher.knnMatch(inputImageDescriptors, liveFrameDescriptors, matchesList, 2);
+        matchEnd = System.nanoTime();
 
         for (int i = 0; i < matchesList.size(); i++) {
             if(matchesList.get(i).rows() > 1){
                 DMatch[] match = matchesList.get(i).toArray();
-                if(match[0].distance <= ratio * match[1].distance){//&& match[0].distance < 80){
-                    good_matches.add(match[0]);
+                if(match[0].distance <= ratio * match[1].distance){
+                    goodMatchesList.add(match[0]);
+                    if(match[0].distance < minimumDistance){
+                        minimumDistance = match[0].distance;
+                    }
+                    if(match[0].distance > maximumDistance){
+                        maximumDistance = match[0].distance;
+                    }
                 }
             }
         }
 
-        Log.i(TAG, "goodMatches: " + good_matches.size());
+        goodMatchesMat.fromList(goodMatchesList);
+        drawMatchesStart = System.nanoTime();
+        Features2d.drawMatches(inputImage, inputImageKeypoints, aInputFrame, liveFrameKeypoints, goodMatchesMat, outputImage, GREEN, RED, drawnMatches, Features2d.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS);
+        drawMatchesEnd = System.nanoTime();
+        Imgproc.resize(outputImage, outputImage, aInputFrame.size());
 
-        goodMatches.fromList(good_matches);
-        //Features2d.drawMatches(img1, keypoints1, aInputFrame, keypoints2, goodMatches, outputImg, GREEN, RED, drawnMatches, Features2d.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS);
-        Imgproc.resize(outputImg, outputImg, aInputFrame.size());
-
-        return outputImg;
+        return outputImage;
     }
 
     public void resetVariables(){
-        descriptors2 = new Mat();
-        keypoints2 = new MatOfKeyPoint();
+        liveFrameDescriptors = new Mat();
+        liveFrameKeypoints = new MatOfKeyPoint();
         matchesList = new ArrayList<>();
-        good_matches = new LinkedList<>();
-        goodMatches = new MatOfDMatch();
-        outputImg = new Mat();
+        goodMatchesList = new LinkedList<>();
+        goodMatchesMat = new MatOfDMatch();
+        outputImage = new Mat();
         drawnMatches = new MatOfByte();
     }
 
     @Override
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        previousTime = time;
-        time = SystemClock.elapsedRealtimeNanos();
-        frameRate = 1000000000/(time-previousTime);
-        Log.i(TAG, "Frames: " + frameRate + " msec per frame: " + 1000/frameRate);
 
-        Mat result = recognize(inputFrame.rgba());
+        previousFrameTimestamp = frameTimestamp;
+        frameTimestamp = SystemClock.elapsedRealtimeNanos();
+        frameRate = NANOS_TO_SECONDS/(frameTimestamp-previousFrameTimestamp);
         resetVariables();
 
-        //Log.i(TAG, "TOTAL RECOGNIZE() METHOD TIME FOR ORB: " + TimeUnit.NANOSECONDS.toMicros(end-start) + " ms.");
-        //Log.i(TAG, "POTENTIAL RECOGNIZE() METHOD TIME IMPROVEMENT: " + (double)TimeUnit.NANOSECONDS.toMicros(end-start-(tempEnd - tempStart) - (secondEnd - secondStart)
-           //                                                                                 - (thirdEnd - thirdStart))/1000 + " ms.");
-
-        return result;
+        return recognize(inputFrame.rgba());
     }
 
 }

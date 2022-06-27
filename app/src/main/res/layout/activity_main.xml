@@ -10,70 +10,51 @@
         android:id="@+id/briskButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="48dp"
-        android:layout_marginBottom="48dp"
+        android:layout_marginStart="100dp"
+        android:layout_marginBottom="64dp"
         android:text="BRISK"
-        app:layout_constraintBottom_toTopOf="@+id/asiftButton"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintBottom_toTopOf="@+id/orbButton"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/akazeButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="48dp"
-        android:layout_marginBottom="48dp"
+        android:layout_marginEnd="100dp"
+        android:layout_marginBottom="64dp"
         android:text="AKAZE"
-        app:layout_constraintBottom_toTopOf="@+id/mserButton"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <Button
-        android:id="@+id/asiftButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="48dp"
-        android:layout_marginBottom="48dp"
-        android:text="ASIFT"
-        app:layout_constraintBottom_toTopOf="@+id/akazeButton"
+        app:layout_constraintBottom_toTopOf="@+id/orbButton"
         app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
         android:id="@+id/kazeButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="48dp"
-        android:layout_marginBottom="48dp"
+        android:layout_marginEnd="100dp"
+        android:layout_marginBottom="64dp"
         android:text="KAZE"
-        app:layout_constraintBottom_toTopOf="@+id/mserButton"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintBottom_toTopOf="@+id/akazeButton"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
         android:id="@+id/orbButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="48dp"
-        android:layout_marginBottom="48dp"
+        android:layout_marginBottom="64dp"
         android:text="ORB"
-        app:layout_constraintBottom_toTopOf="@+id/siftButton"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/siftButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="48dp"
-        android:layout_marginBottom="48dp"
+        android:layout_marginStart="100dp"
+        android:layout_marginBottom="64dp"
         android:text="SIFT"
-        app:layout_constraintBottom_toTopOf="@+id/kazeButton"
+        app:layout_constraintBottom_toTopOf="@+id/briskButton"
         app:layout_constraintStart_toStartOf="parent" />
-
-    <Button
-        android:id="@+id/mserButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="28dp"
-        android:text="MSER"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/akazeButton"
-        app:layout_constraintStart_toEndOf="@+id/kazeButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
